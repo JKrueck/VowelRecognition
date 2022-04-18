@@ -8,7 +8,8 @@ library(randomForest)
 library(class)
 library(klaR)
 library(e1071)
-library(GA)
+library(neuralnet)
+library(tidyverse)
 
 nor = function(x){
   (x-min(x)/max(x)-min(x))
@@ -99,12 +100,21 @@ bagTestErr= 1-mean(bag.pred == test$Class)
 
 
 #Multiclass SVM
-svm1 = svm(Class~.,data=train,gamma=0.1,cost=10)
+svm1 = svm(Class~.,data=train,gamma=0.083,cost=100)
 svm1.pred = predict(svm1,test, type="class")
 svm1TestErr= 1-mean(svm1.pred == test$Class)
-#Without any CV to choose the parameters we achieve a test error of 32%!
-#CV with RBF
+#we achieve a test error of 30%!
+
+#Neural Network Approaches
+#Naive
+data = getOMLDataSet(data.id=58L)$data
+data = data %>% mutate(Class=as_factor(Class))
+train$Sex = as.numeric(train$Sex=="Female")
+test$Sex = as.numeric(test$Sex=="Female")
+nn1 = neuralnet(Class~.-Train_or_Test,data=train,hidden=c(2,2),stepmax = 1e+06,threshold=0.01,linear.output = FALSE)
 
 
-
-
+nn1.pred = predict(nn1,test)
+table(test$Class, apply(nn1.pred,1,which.max))
+#absolutely horrendous
+#it's time to look at papers on this topic
