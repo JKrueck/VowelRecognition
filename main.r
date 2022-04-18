@@ -7,6 +7,13 @@ library(tree)
 library(randomForest)
 library(class)
 library(klaR)
+library(e1071)
+library(GA)
+
+nor = function(x){
+  (x-min(x)/max(x)-min(x))
+}
+
 
 
 setOMLConfig(apikey = "c1994bdb7ecb3c6f3c8f3b35f4b47f1f")
@@ -22,6 +29,14 @@ for(i in 1:990){
 }
 train$Speaker_Number=NULL
 test$Speaker_Number=NULL
+trainNorm = as.data.frame(lapply(train[,c(3,4,5,6,7,8,9,10,11,12)],nor))
+testNorm = as.data.frame(lapply(test[,c(3,4,5,6,7,8,9,10,11,12)],nor))
+trainNorm$Train_or_Test=train$Train_or_Test
+trainNorm$Sex=train$Sex
+trainNorm$Class=train$Class
+testNorm$Train_or_Test=test$Train_or_Test
+testNorm$Sex=test$Sex
+testNorm$Class=test$Class
 #Multivariate Linear Discriminant Analysis
 lda.fit = lda(Class~.-Train_or_Test,data=train)
 ldaTestPred = predict(lda.fit,test)$class
@@ -29,13 +44,20 @@ ldaTestErr = 1-mean(ldaTestPred == test$Class)
 table(ldaTestPred,test$Class)
 #We encounter a first test error of 55.4% here
 
+#Multivariate Linear Discriminant Analysis normalized Data
+ldaNorm.fit = lda(Class~.-Train_or_Test,data=trainNorm)
+ldaNormTestPred = predict(ldaNorm.fit,testNorm)$class
+ldaNormTestErr = 1-mean(ldaNormTestPred == testNorm$Class)
+table(ldaNormTestPred,testNorm$Class)
+#We encounter a test error of 89% here
+
 #Quadratic Discriminant Analysis
 qda.fit = qda(Class~.-Train_or_Test,data=train)
 qdaTestPred = predict(qda.fit,test)$class
 qdaTestErr = 1-mean(qdaTestPred == test$Class)
 table(qdaTestPred,test$Class)
 #We encounter an even worse test error of 58.9%
-#From these two methods we can conclude that easier methods aren't of use at all
+#From these two methods we can conclude that these methods aren't of use at all
 
 #Regularized Discriminant Analysis
 rda.fit = rda(Class~.-Train_or_Test,data=train,crossval=TRUE,fold=10)
@@ -76,18 +98,12 @@ bagTestErr= 1-mean(bag.pred == test$Class)
 #When we consider every predictor at every split we get a test error of 50,6 %
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+#Multiclass SVM
+svm1 = svm(Class~.,data=train,gamma=0.1,cost=10)
+svm1.pred = predict(svm1,test, type="class")
+svm1TestErr= 1-mean(svm1.pred == test$Class)
+#Without any CV to choose the parameters we achieve a test error of 32%!
+#CV with RBF
 
 
 
